@@ -1,7 +1,7 @@
 //import {toStr} from '/lib/util';
 
 
-const BEAN = __.newBean('com.enonic.lib.MYURL');
+const BEAN = __.newBean('com.enonic.lib.URL');
 
 const PROTOCOL_TO_PORT = {
   http: 80,
