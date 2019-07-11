@@ -100,7 +100,8 @@ function addBabelSupport(cfg) {
     options: {
       babelrc: false,
       plugins: [
-        '@babel/plugin-proposal-class-properties'
+        '@babel/plugin-proposal-class-properties',
+        'transform-es2017-object-entries'
       ],
       presets: [
         [

@@ -14,6 +14,80 @@ export class URL {
   //────────────────────────────────────────────────────────────────────────────
   // Static class functions
   //────────────────────────────────────────────────────────────────────────────
+  static parse(url) {
+    log.info('before parse');
+    const javaObj = BEAN.parse(url);
+    log.info('after parse');
+
+    const urlObj = {};
+
+    urlObj.fragment = javaObj.getRef() || undefined; // getRef() can return null
+    log.info(`fragment:${urlObj.fragment}`);
+
+    urlObj.host = javaObj.getHost() || undefined;
+    log.info(`host:${urlObj.host}`);
+
+    urlObj.params = URL.parseQueryString(javaObj.getQuery()); // getQuery() can return null
+    log.info(`params:${urlObj.params}`);
+
+    const userInfo = javaObj.getUserInfo() || ''; // getUserInfo() can return null
+    log.info(`userInfo:${userInfo}`);
+
+    const userInfoArr = userInfo.split(':'); //log.info(`userInfo:${toStr(userInfo)}`);
+    log.info(`userInfoArr:${userInfoArr}`);
+
+    urlObj.password = userInfoArr[1] || undefined;
+    log.info(`password:${urlObj.password}`);
+
+    urlObj.path = javaObj.getPath() || undefined; // getPath() can return ''
+    log.info(`path:${urlObj.path}`);
+
+    const maybePort = javaObj.getPort(); // getPort() can return -1
+    log.info(`maybePort:${maybePort}`);
+
+    //urlObj.port = maybePort >= 0 ? maybePort : URL.portFromProtocol(urlObj.protocol);
+    urlObj.port = maybePort === -1 ? undefined : maybePort; // // getPort() can return -1
+    log.info(`port:${urlObj.port}`);
+
+    urlObj.protocol = javaObj.getProtocol();
+    log.info(`protocol:${urlObj.protocol}`);
+
+    urlObj.user = userInfoArr[0] || undefined;
+    log.info(`user:${urlObj.user}`);
+
+    return urlObj;
+  } // static parse
+
+
+  static serialize(obj) {
+    //log.info(`user:${obj.user}`);
+    //log.info(`password:${obj.password}`);
+    const userInfo = (obj.user || obj.password)
+      ? `${obj.user||''}${obj.password ? `:${obj.password}`: ''}`
+      : undefined;
+    //log.info(`userInfo:${userInfo}`);
+    //log.info(`params:${obj.params}`);
+    const query = URL.paramsToQueryString(obj.params);
+    //log.info(`query:${query}`);
+    //log.info(`protocol:${obj.protocol}`);
+    //log.info(`host:${obj.host}`);
+    //log.info(`port:${obj.port}`);
+    //log.info(`path:${obj.path}`);
+    //log.info(`fragment:${obj.fragment}`);
+    return `${obj.protocol}://${userInfo
+      ? `${userInfo}@`
+      : ''}${obj.host||''}${obj.port
+        ? `:${obj.port}`
+        : ''}${obj.path && typeof obj.path.startsWith === 'function' && !obj.path.startsWith('/')
+          ? `/${obj.path}`
+          : obj.path||''}${query
+            ? `?${query}`
+            : ''}${obj.fragment
+              ? `#${obj.fragment}`
+              : ''}`
+  } // static serialize
+
+
   static addParam(
     params = {}, // Gets modified
     k,
@@ -41,7 +115,7 @@ export class URL {
 
 
   static parseQueryString(string = '') {
-    if (!string) { return {}; }
+    if (!string) { return undefined; }
     const params = {};
     //log.info(`string:${toStr(string)}`);
     string.split('&').forEach(p => {
@@ -58,6 +132,7 @@ export class URL {
   // k:{} -> JSON.stringify({})
   // NOTE encodeURIComponent
   static paramsToQueryString(params) {
+    if (!params) { return ''; }
     //return Object.entries(params).map(([k, a]) => {
     return Object.keys(params).sort().map(k => {
       const a = params[k];
@@ -113,9 +188,10 @@ export class URL {
 
   // https://en.wikipedia.org/wiki/URL_normalization
   // Inspired by https://github.com/sindresorhus/normalize-url/blob/master/license
+  // But limited by what java.net.URL can parse
   static normalize(urlString, {
-		defaultProtocol = 'http:',
-		normalizeProtocol = true,
+		//defaultProtocol = 'http:',
+		//normalizeProtocol = true,
 		forceHttp = false,
 		forceHttps = false,
 		stripAuthentication = true,
@@ -128,21 +204,31 @@ export class URL {
 		removeDirectoryIndex = false//,
 		//sortQueryParameters: true,
 	} = {}) {
+    log.info(`urlString:${urlString}`);
+    //if (!urlString) { return ''; }
+
+    const urlObj = new URL(urlString);
+    log.info(`urlObj:${toStr(urlObj)}`);
+
     function testParameter(name, filters) {
       return filters.some(filter => filter instanceof RegExp ? filter.test(name) : filter === name);
     }
 
-    urlString = urlString.trim();
+    /*urlString = urlString.trim();
+    log.info(`trimmed:${urlString}`);*/
 
-  	const hasRelativeProtocol = urlString.startsWith('//');
-  	const isRelativeUrl = !hasRelativeProtocol && /^\.*\//.test(urlString);
+  	/*const hasRelativeProtocol = urlString.startsWith('//');
+    log.info(`hasRelativeProtocol:${hasRelativeProtocol}`);*/
+
+  	/*const isRelativeUrl = !hasRelativeProtocol && /^\.*\//.test(urlString);
+    log.info(`isRelativeUrl:${isRelativeUrl}`);
 
   	// Prepend protocol
   	if (!isRelativeUrl) {
   		urlString = urlString.replace(/^(?!(?:\w+:)?\/\/)|^\/\//, defaultProtocol);
-  	}
+      log.info(`protocolPrepended:${urlString}`);
+  	}*/
 
-  	const urlObj = new URL(urlString);
 
   	if (forceHttp && forceHttps) {
   		throw new Error('The `forceHttp` and `forceHttps` cannot be used together');
@@ -150,21 +236,25 @@ export class URL {
 
   	if (forceHttp && urlObj.protocol === 'https:') {
   		urlObj.protocol = 'http:';
+      log.info(`forceHttp:${urlObj}`);
   	}
 
   	if (forceHttps && urlObj.protocol === 'http:') {
   		urlObj.protocol = 'https:';
+      log.info(`forceHttps:${urlObj}`);
   	}
 
   	// Remove auth
   	if (stripAuthentication) {
   		urlObj.user = '';
   		urlObj.password = '';
+      log.info(`stripAuthentication:${urlObj}`);
   	}
 
   	// Remove fragment
   	if (stripFragment) {
       urlObj.fragment = '';
+      log.info(`stripFragment:${urlObj}`);
   	}
 
   	// Remove duplicate slashes if not preceded by a protocol
@@ -175,11 +265,13 @@ export class URL {
   			}
   			return '/';
   		});
+      log.info(`duplicatedSlashedRemoved:${urlObj}`);
   	}
 
   	// Decode URI octets
   	if (urlObj.path) {
   		urlObj.path = decodeURI(urlObj.path);
+      log.info(`decoded:${urlObj}`);
   	}
 
   	// Remove directory index
@@ -240,9 +332,9 @@ export class URL {
   	}
 
   	// Restore relative protocol, if applicable
-  	if (hasRelativeProtocol && !normalizeProtocol) {
+  	/*if (hasRelativeProtocol && !normalizeProtocol) {
   		urlString = urlString.replace(/^http:\/\//, '//');
-  	}
+  	}*/
 
   	// Remove http/https
   	if (stripProtocol) {
@@ -252,39 +344,20 @@ export class URL {
   	return urlString;
   } // normalize
 
-  //────────────────────────────────────────────────────────────────────────────
-  // Instance properties
-  //────────────────────────────────────────────────────────────────────────────
-  fragment = '';
-  host = '';
-  password = '';
-  params = {};
-  path = '';
-  port = 80;
-  protocol = '';
-  user = '';
 
   //────────────────────────────────────────────────────────────────────────────
   // Public methods
   //────────────────────────────────────────────────────────────────────────────
   constructor(url) {
+    log.info('constructor start');
     this.parse(url);
+    log.info('constructor end');
   }
 
   parse(url) {
-    const javaObj = BEAN.parse(url);
-    this.fragment = javaObj.getRef() || ''; // getRef() can return null
-    this.host = javaObj.getHost();
-    this.path = javaObj.getPath() || '/'; // getPath() can return ''
-    this.protocol = javaObj.getProtocol();
-    const maybePort = javaObj.getPort(); // getPort() can return -1
-    this.port = maybePort >= 0 ? maybePort : URL.portFromProtocol(this.protocol);
-    this.params = URL.parseQueryString(javaObj.getQuery() || ''); // getQuery() can return null
-    const userInfo = javaObj.getUserInfo() || ''; // getUserInfo() can return null
-    //log.info(`userInfo:${toStr(userInfo)}`);
-    const userInfoArr = userInfo.split(':');
-    this.user = userInfoArr[0];
-    this.password = userInfoArr[1];
+    Object.entries(URL.parse(url)).forEach(([k,v]) => {
+      this[k] = v;
+    });
     return this; // Chainable
   }
 
@@ -296,20 +369,12 @@ export class URL {
 
   //canStripPort = () => URL.canStripPort(this.protocol, this.port)
 
+  serialize() {
+    return URL.serialize(this);
+  }
+
   toString() {
-    const userInfo = `${this.user}${this.password ? `:${this.password}`: ''}`
-    const query = URL.paramsToQueryString(this.params);
-    return `${this.protocol}://${userInfo
-      ? `${userInfo}@`
-      : ''}${this.host}${URL.canStripPort(this.protocol, this.port)
-        ? ''
-        : `:${this.port}`}${this.path.startsWith('/')
-          ? this.path
-          : `/${this.path}`}${query
-            ? `?${query}`
-            : ''}${this.fragment
-              ? `#${this.fragment}`
-              : ''}`
+    return URL.serialize(this);
   }
 
   addParam(key, value) {
