@@ -19,7 +19,7 @@
     "autoprefixer": "^9.5.1",
     "babel-loader": "^8.0.6",
     "babel-plugin-transform-es2017-object-entries": "0.0.5",
-    "browserslist": "^4.6.0",
+    "browserslist": "^4.16.5",
     "browserslist-config-enonic": "^1.0.4",
     "copy-webpack-plugin": "^5.0.3",
     "cross-env": "^5.2.0",
