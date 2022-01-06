@@ -39,7 +39,7 @@ var MALFORMED = [{
         name: 'java.net.MalformedURLException'
       }
   }
-}];
+}]; // MALFORMED
 
 
 var TESTS = [{
@@ -49,7 +49,7 @@ var TESTS = [{
   },
   serialized: 'ftp://',
   normalized: 'ftp://'
-}/*,{
+},{
   in: 'http:',
   obj: {
     protocol: 'http'
@@ -147,7 +147,7 @@ var RESOLVE_TESTS = [{
   base: 'https://www.example.com',
   path: '/path',
   resolved: 'https://www.example.com/path'
-}];
+}]; // RESOLVE_TESTS
 
 
 function isNotSet(value) {
